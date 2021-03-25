@@ -4,7 +4,9 @@ let ws = new WebSocket(`ws://${window.location.hostname}:${window.location.port}
 ws.onmessage = (mess) => console.log(mess.data);
 
 function send(method, params) {
-    ws.send(JSON.stringify({ method: method, params: params }));
+    let message = JSON.stringify({ method: method, params: params });
+    console.log(message);
+    ws.send(message);
 }
 
 function attack(sampler, sound) {
@@ -165,7 +167,7 @@ function draw() {
     	pad.y + + 4 * (KEY_SIZE + padding) + padding,
    	);
 
-    ui.line = new Line(two, lineOffset, 1500, 10000, (value) => {
+    ui.line = new Line(two, lineOffset, 0, 1, (value) => {
     	if (keysPressed.dot) {
         	setEffect(value);
     	}
