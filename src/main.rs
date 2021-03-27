@@ -6,19 +6,18 @@ use serde_json::from_str;
 use tokio::sync::mpsc::{channel, Sender};
 use warp::Filter;
 
+mod oscillators;
 mod sound;
 
 use sound::*;
-
 
 #[derive(Clone, Deserialize, Debug)]
 #[serde(tag = "method", content = "params")]
 #[serde(rename_all(deserialize = "kebab-case"))]
 pub enum IncommingRPC {
-    Attack { sound: String },
-    Release { sound: String },
-    SetEffect { value: f32 },
-    UnsetEffect {},
+    Key { number: u8, down: bool },
+    Line { value: f32 },
+    Dot { down: bool },
 }
 
 #[tokio::main]
@@ -36,10 +35,9 @@ async fn main() {
 
                 while let Some(Ok(msg)) = rx.next().await {
                     if let Ok(text) = msg.to_str() {
-                        if let Ok(rpc) = from_str::<IncommingRPC>(text) {
-                            println!("{:?}", rpc);
-                            sound_tx.send(rpc).await;
-                        }
+                        let rpc = from_str::<IncommingRPC>(text).unwrap();
+                        println!("{:?}", rpc);
+                        sound_tx.send(rpc).await;
                     }
                 }
             })

@@ -1,4 +1,3 @@
-
 let sampler1 = {}, sampler2 = {};
 let ws = new WebSocket(`ws://${window.location.hostname}:${window.location.port}/ws`);
 ws.onmessage = (mess) => console.log(mess.data);
@@ -9,30 +8,26 @@ function send(method, params) {
     ws.send(message);
 }
 
-function attack(sampler, sound) {
-    send('attack', { sound: sound });
+function sendKey(number, down) {
+    send('key', { number, down });
 }
 
-function release(sampler, sound) {
-    send('release', { sound: sound });
+function sendDot(down) {
+    send('dot', { down });
 }
 
-function setEffect(value) {
-    send('set-effect', { value: value });
-}
-
-function unsetEffect() {
-    send('unset-effect', {});
+function sendLine(value) {
+    send('line', { value });
 }
 
 let keysPressed = {};
 
 let style = {
     highlight: '#FFB200',
-	keyFill: '#D40000',
-	keyTextFill: '#FFFFFF',
-	keyLinewidth: 0,
-	keyPressedLinewidth: 0,
+    keyFill: '#D40000',
+    keyTextFill: '#FFFFFF',
+    keyLinewidth: 0,
+    keyPressedLinewidth: 0,
 }
 
 let ui = {
@@ -41,22 +36,22 @@ let ui = {
 
 let two;
 
-function bind(key, sampler, freq) {
-	keysPressed[key] = false;
+function bind(key, number) {
+    keysPressed[key] = false;
 
     keyboardJS.bind(
         key,
         (_) => {
             if (!keysPressed[key]) {
-                attack(sampler, freq);
+                sendKey(number, true);
                 keysPressed[key] = true;
                 ui.pad[key].linewidth = style.keyPressedLinewidth;
-            	ui.pad[key].text.fill = style.highlight;
+                ui.pad[key].text.fill = style.highlight;
                 two.update();
             }
         },
         (_) => {
-            release(sampler, freq);
+            sendKey(number, false);
             keysPressed[key] = false;
             ui.pad[key].linewidth = style.keyLinewidth;
             ui.pad[key].text.fill = style.keyTextFill;
@@ -66,28 +61,28 @@ function bind(key, sampler, freq) {
 }
 
 // first row
-bind('6', sampler1, 'D2');
-bind('7', sampler1, 'F2');
-bind('8', sampler1, 'A2');
-bind('9', sampler1, 'C3');
+bind('6', 0);
+bind('7', 1);
+bind('8', 2);
+bind('9', 3);
 
 // second row
-bind('y', sampler1, 'C2');
-bind('u', sampler1, 'E2');
-bind('i', sampler1, 'G2');
-bind('o', sampler1, 'B2');
+bind('y', 4);
+bind('u', 5);
+bind('i', 6);
+bind('o', 7);
 
 // third row
-bind('h', sampler2, 'D1');
-bind('j', sampler2, 'F1');
-bind('k', sampler2, 'A1');
-bind('l', sampler2, 'C2');
+bind('h', 8);
+bind('j', 9);
+bind('k', 10);
+bind('l', 11);
 
 // fourth row
-bind('n', sampler2, 'C1');
-bind('m', sampler2, 'E1');
-bind(',', sampler2, 'G1');
-bind('.', sampler2, 'B1');
+bind('n', 12);
+bind('m', 13);
+bind(',', 14);
+bind('.', 15);
 
 keyboardJS.bind(
     'z',
@@ -95,20 +90,20 @@ keyboardJS.bind(
         if (!keysPressed.dot) {
             keysPressed.dot = true;
             ui.dot.highlight();
-			setEffect(ui.line.value);
+            sendDot(true);
         }
     },
     (_) => {
         keysPressed.dot = false;
         ui.dot.lowlight();
-        unsetEffect();
+        sendDot(false);
     }
 );
 
 
 function draw() {
     let elem = document.getElementById('surfer');
-	let params = { fullscreen: true };
+    let params = { fullscreen: true };
     two = new Two(params).appendTo(elem);
 
     let keys = [
@@ -158,22 +153,47 @@ function draw() {
     let padWidth = maxLength * (KEY_SIZE + padding) + padding + KEY_SIZE;
 
     let dotOffset = new Two.Vector(
-    	pad.x + KEY_SIZE * 5 / 3 - padding,
-    	pad.y + 4 * (KEY_SIZE + padding) + padding,
+        pad.x + KEY_SIZE * 5 / 3 - padding,
+        pad.y + 4 * (KEY_SIZE + padding) + padding,
     );
     ui.dot = new Dot(two, dotOffset);
     let lineOffset = new Two.Vector(
-    	pad.x + KEY_SIZE * 5 / 3 + KEY_SIZE,
-    	pad.y + + 4 * (KEY_SIZE + padding) + padding,
-   	);
+        pad.x + KEY_SIZE * 5 / 3 + KEY_SIZE,
+        pad.y + + 4 * (KEY_SIZE + padding) + padding,
+    );
 
     ui.line = new Line(two, lineOffset, 0, 1, (value) => {
-    	if (keysPressed.dot) {
-        	setEffect(value);
-    	}
+        sendLine(value);
     });
 
     two.update();
 }
 
-window.onload = (_) => draw();
+let ready = {
+    window: false,
+    ws: false,
+};
+
+function allReady(ready) {
+    for (let prop in ready) {
+        if (!ready[prop]) { return false; }
+    }
+
+    return true;
+}
+
+window.onload = (_) => {
+    ready.window = true;
+
+    if (allReady(ready)) {
+        draw();
+    }
+}
+
+ws.onopen = (_) => {
+    ready.ws = true;
+
+    if (allReady(ready)) {
+        draw();
+    }
+}
